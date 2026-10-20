@@ -17,9 +17,9 @@
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^4.0.83",
+    "@layrcake/ai-sdk": "^0.1.0",
     "ai": "^7.0.145",
-    "layrcake": "^0.1.0",
-    "zod": "^4.6.7"
+    "layrcake": "^0.2.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

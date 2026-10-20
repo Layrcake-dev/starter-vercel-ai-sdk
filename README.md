@@ -2,7 +2,7 @@
 
 An AI SDK agent that turns a one-sentence brief into about 10 people with verified work emails and a draft campaign, then stops at the approval link.
 
-It uses [`generateText`](https://ai-sdk.dev/docs/ai-sdk-core/generating-text) with tools from the [AI SDK](https://ai-sdk.dev), the Anthropic provider, and the official [`layrcake`](https://github.com/Layrcake-dev/layrcake-js) TypeScript SDK. Nothing is sent. A person approves the campaign in the Layrcake console before any email goes out.
+It uses [`generateText`](https://ai-sdk.dev/docs/ai-sdk-core/generating-text) with tools from the [AI SDK](https://ai-sdk.dev), the Anthropic provider, and the [`@layrcake/ai-sdk`](https://github.com/Layrcake-dev/layrcake-ai-sdk) tools, which are built on the official [`layrcake`](https://github.com/Layrcake-dev/layrcake-js) TypeScript SDK. Nothing is sent. A person approves the campaign in the Layrcake console before any email goes out.
 
 ## What it does
 
@@ -14,10 +14,10 @@ It uses [`generateText`](https://ai-sdk.dev/docs/ai-sdk-core/generating-text) wi
 
 ## Why the SDK for this kit
 
-Tools in the AI SDK are typed functions: a zod `inputSchema` and an `execute` function. Wrapping the `layrcake` SDK in five of them is the most direct fit:
+Tools in the AI SDK are typed functions: an `inputSchema` and an `execute` function. `@layrcake/ai-sdk` wraps the `layrcake` SDK in five of them, which is the most direct fit:
 
 - Each tool takes only the arguments this agent needs. `launch_campaign` has no `confirmation_token` argument, so the model cannot approve anything.
-- The rules live in code in `src/tools.ts`. Every paid call gets `budget_credits` set to what is left of `BUDGET`. `--dry-run` adds `dry_run: true` to every call. `create_campaign` refuses any address that did not pass `verify_email` in this run. Once the approval link appears, every paid tool refuses.
+- The rules live in code in `@layrcake/ai-sdk`, which takes them from `layrcake/agent-tools` in the `layrcake` SDK, the one place every Layrcake agent integration gets them from. Every paid call gets `budget_credits` set to what is left of `BUDGET`. `--dry-run` adds `dry_run: true` to every call. `create_campaign` refuses any address that did not pass `verify_email` in this run. Once the approval link appears, every tool refuses.
 - The SDK handles retries, typed errors and idempotency keys. The tools pass a key derived from the call, so a repeated call returns the first result instead of charging again.
 - `toolCallConcurrency: 1` runs one Layrcake call at a time, so the running total is exact. `stopWhen: hasToolCall("launch_campaign")` ends the loop at the approval link.
 - The `layrcake` package has no dependencies and runs on Node, Vercel Functions and Edge, so the same tools work in a route handler.
@@ -120,11 +120,11 @@ We ran this kit this way on 20 October 2026.
 ## Project layout
 
 ```text
-src/agent.ts         the agent: model, tools, stop conditions, report
-src/tools.ts         the five Layrcake tools and the run budget
+src/agent.ts         the run: brief, budget, model, report
+src/prospector.ts    the agent loop: tools from @layrcake/ai-sdk, stop conditions
 src/instructions.ts  the system prompt
 src/smoke.ts         free setup check, no model call
-test/tools.test.ts   tool tests with a mocked Layrcake API
+test/prospector.test.ts  agent loop tests with a mocked Layrcake API and a mock model
 ```
 
 ## Development
@@ -135,7 +135,7 @@ npm run typecheck
 npm test
 ```
 
-The tests pass a mocked `fetch` to the `Layrcake` client. They need no keys and make no network calls.
+The tests pass a mocked `fetch` to the `Layrcake` client and run the agent with a mock language model. They need no keys and make no network calls. The tools themselves are tested in `@layrcake/ai-sdk` and `layrcake`.
 
 ## Links
 
