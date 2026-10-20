@@ -10,6 +10,8 @@ export interface ProspectOptions {
   budget: number;
   /** Send dry_run: true on every Layrcake call. Nothing is charged. */
   dryRun: boolean;
+  /** The name every drafted email is signed with. Without it, emails are signed [Your name]. */
+  senderName?: string;
   /** Stable per run. Idempotency keys derive from it. */
   runId: string;
   /** Defaults to a client that reads LAYRCAKE_API_KEY. */
@@ -22,11 +24,11 @@ export interface ProspectOptions {
  * One run of the agent: the brief in, the model's report and the run summary out.
  * The tools and their rules come from @layrcake/ai-sdk.
  */
-export async function prospect({ model, brief, budget, dryRun, runId, client, onToolCall }: ProspectOptions) {
+export async function prospect({ model, brief, budget, dryRun, senderName, runId, client, onToolCall }: ProspectOptions) {
   const { tools, summary } = createLayrcakeTools({ client, budget, dryRun, runId });
   const result = await generateText({
     model,
-    instructions: instructions({ budget, dryRun }),
+    instructions: instructions({ budget, dryRun, senderName }),
     prompt: brief,
     tools,
     toolCallConcurrency: 1, // one Layrcake call at a time keeps the budget exact

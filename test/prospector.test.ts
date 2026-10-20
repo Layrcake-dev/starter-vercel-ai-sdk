@@ -3,6 +3,7 @@
 import { MockLanguageModelV4 } from "ai/test";
 import { Layrcake } from "layrcake";
 import { describe, expect, it } from "vitest";
+import { instructions } from "../src/instructions.js";
 import { prospect } from "../src/prospector.js";
 
 type Call = { path: string; body: Record<string, unknown> };
@@ -64,7 +65,7 @@ describe("the prospector agent", () => {
     });
     const logged: string[] = [];
 
-    const { summary } = await prospect({ model, brief: "Find heads of sales in London", budget: 100, dryRun: false, runId: "run-test", client, onToolCall: (name) => logged.push(name) });
+    const { summary } = await prospect({ model, brief: "Find heads of sales in London", budget: 100, dryRun: false, senderName: "Sam Carter", runId: "run-test", client, onToolCall: (name) => logged.push(name) });
 
     expect(logged).toEqual(steps.map(([name]) => name));
     expect(calls.map((c) => c.path)).toEqual(["/v1/find_leads", "/v1/enrich", "/v1/verify_email", "/v1/campaigns", "/v1/launch_campaign"]);
@@ -72,6 +73,7 @@ describe("the prospector agent", () => {
     expect(calls[4]?.body).toEqual({ campaign_id: CAMPAIGN_ID, dry_run: false });
     expect(model.doGenerateCalls).toHaveLength(5);
     expect(JSON.stringify(model.doGenerateCalls[0]?.prompt)).toContain("budget of 100 credits");
+    expect(JSON.stringify(model.doGenerateCalls[0]?.prompt)).toContain("exactly as written: Sam Carter");
     expect(summary).toEqual({ found: 1, kept: 1, catchAll: 0, spent: 9.25, approvalUrl: APPROVAL_URL, launchError: null });
   });
 
@@ -89,7 +91,26 @@ describe("the prospector agent", () => {
 
     expect(calls.map((c) => c.body.dry_run)).toEqual([true, true, true, true]);
     expect(JSON.stringify(model.doGenerateCalls[0]?.prompt)).toContain("This is a dry run");
+    expect(JSON.stringify(model.doGenerateCalls[0]?.prompt)).toContain("exactly as written: [Your name]");
     expect(text).toBe("Estimate for 10 people: about 66 credits.");
     expect(summary).toMatchObject({ spent: 0, approvalUrl: null });
+  });
+});
+
+describe("the sign-off rule", () => {
+  it("signs every email with SENDER_NAME and never invents a sender", () => {
+    const prompt = instructions({ budget: 100, dryRun: false, senderName: "Sam Carter" });
+    expect(prompt).toContain("End every email with this sign-off line, exactly as written: Sam Carter\n");
+    expect(prompt).toContain("never invent a name, title or company for the sender");
+    expect(prompt).not.toContain("[Your name]");
+  });
+
+  it("signs every email [Your name] without SENDER_NAME and says so in the report", () => {
+    for (const senderName of [undefined, "", "   "]) {
+      const prompt = instructions({ budget: 100, dryRun: false, senderName });
+      expect(prompt).toContain("End every email with this sign-off line, exactly as written: [Your name]\n");
+      expect(prompt).toContain("never invent a name, title or company for the sender");
+      expect(prompt).toMatch(/Also say that every email is signed \[Your name\] and the sign-off must be filled in before the campaign\s+is approved\.$/);
+    }
   });
 });

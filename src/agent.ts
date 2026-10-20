@@ -18,6 +18,7 @@ const { text, summary: run } = await prospect({
   brief,
   budget,
   dryRun,
+  senderName: process.env.SENDER_NAME,
   runId: randomUUID(),
   onToolCall: (name) => console.log(`-> ${name}`),
 });
