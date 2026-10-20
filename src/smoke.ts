@@ -3,7 +3,7 @@
 import { randomUUID } from "node:crypto";
 import type { ToolExecutionOptions } from "ai";
 import { Layrcake } from "layrcake";
-import { createLayrcakeTools } from "./tools.js";
+import { createLayrcakeTools } from "@layrcake/ai-sdk";
 
 const client = new Layrcake(); // reads LAYRCAKE_API_KEY
 const { tools, summary } = createLayrcakeTools({ client, budget: Number(process.env.BUDGET ?? 100), dryRun: true, runId: randomUUID() });
